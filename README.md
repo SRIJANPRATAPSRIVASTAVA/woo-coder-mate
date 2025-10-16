@@ -3,12 +3,12 @@
 A powerful web application for syncing WooCommerce products and creating dynamic product segments using custom filter conditions. Built with React, TypeScript, and Supabase.
 
 ## Other Functional Requirements
-● Set up cron-based periodic ingestion
-● Add input validation for the segment editor ✅
-● Add unit or integration tests for backend or frontend ✅ (inside src/__tests__)
-![1760629224085](image/README/1760629224085.png)
-● Add a Dockerfile and docker-compose.yml to containerize the services
-● Document all backend APIs using Swagger (OpenAPI spec) ✅ (https://woo-coder-mate-main.vercel.app/api-docs)
+* Set up cron-based periodic ingestion
+* Add input validation for the segment editor ✅
+* Add unit or integration tests for backend or frontend ✅ (inside src/__tests__)
+* ![1760629224085](image/README/1760629224085.png)
+* Add a Dockerfile and docker-compose.yml to containerize the services
+* Document all backend APIs using Swagger (OpenAPI spec) ✅ (https://woo-coder-mate-main.vercel.app/api-docs)
 
 ## Sample Dotenv is provided
 
