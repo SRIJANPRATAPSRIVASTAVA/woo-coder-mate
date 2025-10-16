@@ -1,0 +1,307 @@
+openapi: 3.0.3
+info:
+  title: WooCommerce Product Segmentation API
+  description: |
+    API for syncing WooCommerce products and evaluating product segments based on custom filter conditions.
+    
+    This API allows you to:
+    - Sync products from WooCommerce to the database
+    - Retrieve all products from the database
+    - Filter products using custom segment conditions
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: https://wkcgklleqierciawcfqv.supabase.co/functions/v1
+    description: Production server
+
+tags:
+  - name: Products
+    description: Product management operations
+  - name: Segments
+    description: Product segmentation and filtering
+
+paths:
+  /sync-products:
+    post:
+      tags:
+        - Products
+      summary: Sync products from WooCommerce
+      description: |
+        Fetches products from WooCommerce API and syncs them to the database.
+        Products are upserted (inserted or updated if they already exist).
+      operationId: syncProducts
+      responses:
+        '200':
+          description: Products successfully synced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  synced:
+                    type: integer
+                    description: Number of products synced
+                    example: 42
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /get-products:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      description: Retrieves all products from the database, ordered by ID
+      operationId: getProducts
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    description: Total number of products
+                    example: 42
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /evaluate-segments:
+    post:
+      tags:
+        - Segments
+      summary: Evaluate product segments
+      description: |
+        Filters products based on custom segment conditions.
+        
+        **Condition Format:**
+        - One condition per line
+        - Format: `field operator value`
+        
+        **Supported Fields:**
+        - `title` - Product title (string)
+        - `price` - Product price (numeric)
+        - `stock_status` - Stock status (string)
+        - `stock_quantity` - Stock quantity (numeric)
+        - `category` - Product category (string)
+        - `on_sale` - On sale status (boolean: true/false)
+        
+        **Supported Operators:**
+        - `=` - Equal to
+        - `!=` - Not equal to
+        - `>` - Greater than
+        - `<` - Less than
+        - `>=` - Greater than or equal to
+        - `<=` - Less than or equal to
+        
+        **Example Conditions:**
+        ```
+        price > 50
+        category = Jackets
+        stock_status = instock
+        stock_quantity >= 0
+        on_sale = true
+        title = Assumenda.
+        ```
+      operationId: evaluateSegments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - conditions
+              properties:
+                conditions:
+                  type: string
+                  description: Multi-line string with segment conditions (one per line)
+                  maxLength: 500
+                  example: |
+                    price > 5000
+                    category = Smartphones
+                    stock_status = instock
+                    on_sale = true
+      responses:
+        '200':
+          description: Segment evaluated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  conditions:
+                    type: array
+                    description: Parsed conditions
+                    items:
+                      $ref: '#/components/schemas/ParsedCondition'
+                  matched:
+                    type: integer
+                    description: Number of products matching the conditions
+                    example: 15
+                  products:
+                    type: array
+                    description: Products matching all conditions
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid request or conditions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidFormat:
+                  summary: Invalid condition format
+                  value:
+                    success: false
+                    error: 'Invalid condition format: "invalid line"'
+                unknownField:
+                  summary: Unknown field
+                  value:
+                    success: false
+                    error: 'Unknown field: "invalid_field"'
+                missingConditions:
+                  summary: Missing conditions
+                  value:
+                    success: false
+                    error: 'Missing or invalid "conditions" field. Expected a string with one condition per line.'
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique product ID from WooCommerce
+          example: 12345
+        title:
+          type: string
+          description: Product name/title
+          example: "iPhone 15 Pro"
+        price:
+          type: number
+          format: float
+          description: Product price (defaults to 0 if null)
+          example: 999.99
+        stock_status:
+          type: string
+          description: Stock availability status
+          enum: [instock, outofstock, onbackorder]
+          example: "instock"
+        stock_quantity:
+          type: integer
+          nullable: true
+          description: Quantity in stock (defaults to 0 if null)
+          example: 50
+        category:
+          type: string
+          nullable: true
+          description: Primary product category
+          example: "Smartphones"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Product tags
+          example: ["electronics", "mobile", "5g"]
+        on_sale:
+          type: boolean
+          description: Whether the product is on sale
+          example: true
+        date_created:
+          type: string
+          format: date-time
+          nullable: true
+          description: Product creation date from WooCommerce
+          example: "2024-01-15T10:30:00"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when product was synced to database
+          example: "2024-01-15T14:22:00"
+        synced_at:
+          type: string
+          format: date-time
+          description: Last sync timestamp
+          example: "2024-01-15T14:22:00"
+      required:
+        - id
+        - title
+        - price
+        - stock_status
+        - on_sale
+
+    ParsedCondition:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Field name to filter on
+          example: "price"
+        operator:
+          type: string
+          description: Comparison operator
+          enum: ["=", "!=", ">", "<", ">=", "<="]
+          example: ">"
+        value:
+          type: string
+          description: Value to compare against
+          example: "5000"
+      required:
+        - field
+        - operator
+        - value
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "An error occurred while processing your request"
+      required:
+        - success
+        - error
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Supabase anon key for authentication
+
+security:
+  - ApiKeyAuth: []
